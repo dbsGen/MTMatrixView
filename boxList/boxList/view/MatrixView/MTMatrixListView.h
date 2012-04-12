@@ -24,7 +24,8 @@
     MTSize      _topBounds,
                 _bottomBounds;
     NSIndexPath *_touchStartIndex;
-    NSMutableDictionary *_cached;
+    NSMutableDictionary *_cached,
+                        *_showCache;
     NSMutableArray      *_sizes;
 }
 
@@ -35,7 +36,7 @@
 //header setting
 @property (nonatomic, assign)   CGFloat     headerHeight;
 
-- (void)reloadDatas;
+- (void)reloadData;
 - (MTMatrixViewCell*)dequeueReusableCellWithIdentifier:(NSString*)indentify;
 - (MTMatrixViewCell*)cellWithIndexPath:(NSIndexPath*)indexPath;
 - (NSIndexPath*)indexPathWithCell:(MTMatrixViewCell*)cell;

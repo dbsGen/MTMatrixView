@@ -8,6 +8,9 @@
 
 #import "MTMatrixListView.h"
 #import <QuartzCore/QuartzCore.h>
+#import "MTMatrixSection.h"
+
+#define kDefaulteHeaderHeight   5
 
 @implementation MTMatrixListView
 
@@ -34,7 +37,7 @@ static CATransition *__reloadTransition;
             __reloadTransition.type = @"fade";
         }
         self.contentSize = (CGSize){320, 480};
-        [self reloadDatas];
+        _showCache = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -42,7 +45,13 @@ static CATransition *__reloadTransition;
 - (void)setFrame:(CGRect)frame
 {
     [super setFrame:frame];
-    [self reloadDatas];
+    [self reloadData];
+}
+
+- (void)didMoveToSuperview
+{
+    [super didMoveToSuperview];
+    [self reloadData];
 }
 
 - (void)dealloc
@@ -51,10 +60,11 @@ static CATransition *__reloadTransition;
     _matrixDelegate = nil;
     [_sizes     release];
     [_cached    release];
+    [_showCache release];
     [super      dealloc];
 }
 
-- (void)reloadDatas
+- (void)reloadData
 {
     CGRect rect = self.frame;
     _transverse = rect.size.width / _spaceWidth;
@@ -64,37 +74,40 @@ static CATransition *__reloadTransition;
     int sectionCount = [_matrixDelegate numberOfSectionsInMatrixView:self];
     [_sizes removeAllObjects];
     CGFloat top = 0;
-    for (int n = 0 ; n < sectionCount ; n++) {
-        NSMutableArray *nArray = [NSMutableArray array];
-        CGFloat headerHeight = 5;
+    for (int n = 0 ; n < sectionCount; n++) {
+        MTMatrixSection section;
+        section.section = n;
+        section.rowCount = [_matrixDelegate matrixView:self
+                                       numberOfSection:n];
+        float height;
+        if (section.rowCount) {
+            height = ((section.rowCount - 1) / _transverse + 1) * _spaceHeight;
+        }else height = 0;
         if ([_matrixDelegate respondsToSelector:@selector(matrixView:headerHeightOfSection:)]) {
-            headerHeight = [_matrixDelegate matrixView:self headerHeightOfSection:n];
+            section.headerHeight = [_matrixDelegate matrixView:self
+                                        headerHeightOfSection:n];
+        }else {
+            section.headerHeight = kDefaulteHeaderHeight;
         }
-        [nArray addObject:[NSValue valueWithMTSize:(MTSize){top, headerHeight}]];
-        top += headerHeight;
-        int totle = [_matrixDelegate matrixView:self numberOfSection:n];
-        int lineNum = totle;
-        for (int m = 0 ; m < lineNum; m++) {
-            //if you want to define each orther row height , here white the delegate.
-            if (m > 1 && m % _transverse == 0) {
-                top += _spaceHeight;
-            }
-            [nArray addObject:[NSValue valueWithMTSize:(MTSize){top, _spaceHeight}]];
-        }
-        top += _spaceHeight;
-        [_sizes addObject:nArray];
+        height += section.headerHeight;
+        section.offset = top;
+        [_sizes addObject:[NSValue valueWithMatrixSection:section]];
+        top += height;
     }
-    [self removeSubviewsInDRange:(MTDRange){_startRange, _endRange}];
-    _startRange = (MTRange){0,0};
-    _endRange = (MTRange){0,0};
-    _topBounds = (MTSize){0,0};
-    _bottomBounds = (MTSize){0,0};
-    [self showSubviewInRect:(CGRect){self.contentOffset, 
-        self.bounds.size}];
-    if (top < rect.size.height) {
-        top = rect.size.height + 0.5;
+    self.contentSize = (CGSize){self.bounds.size.width, top};
+    _startRange.location = 0;
+    _startRange.length = 0;
+    _endRange.location = 0;
+    _endRange.length = 0;
+    _topBounds.height = 0;
+    _topBounds.offset = 0;
+    _bottomBounds.offset = 0;
+    _bottomBounds.height = 0;
+    NSArray *keys = [_showCache allKeys];
+    for (NSString *key in keys) {
+        [self removeSubview:key];
     }
-    self.contentSize = CGSizeMake(self.bounds.size.width, top);
+    [self showSubviewInRect:(CGRect){self.contentOffset, self.bounds.size}];
 }
 
 - (void)setDelegate:(id<UIScrollViewDelegate>)delegate
@@ -115,13 +128,17 @@ static CATransition *__reloadTransition;
 
 #pragma mark - self method
 
-- (void)removeSubview:(UIView*)view
+- (void)removeSubview:(id)key
 {
+    if (!key) {
+        return;
+    }
+    UIView *view = [_showCache objectForKey:key];
     if (![[self subviews] containsObject:view]) 
         return;
-    view.tag = -1;
     if ([view isKindOfClass:[MTMatrixViewCell class]]) {
         NSString *indentify = ((MTMatrixViewCell*)view).reuseIdentifier;
+        ((MTMatrixViewCell*)view).indexPath = nil;
         NSMutableArray *array = [_cached objectForKey:indentify];
         if (!array) {
             array = [NSMutableArray array];
@@ -131,6 +148,7 @@ static CATransition *__reloadTransition;
         [array addObject:view];
     }
     [view removeFromSuperview];
+    [_showCache removeObjectForKey:key];
 }
 
 - (void)removeSubviewsInDRange:(MTDRange)drange
@@ -139,27 +157,43 @@ static CATransition *__reloadTransition;
         for (int n = drange.range1.length ; 
              n <= drange.range2.length;
              n ++) {
-            UIView *subView = [self viewWithTag:tagWithRowAndSction(n, drange.range1.location)];
-            [self removeSubview:subView];
+            id key = nil;
+            if (n) 
+                key = [NSIndexPath indexPathForRow:n - 1
+                                         inSection:drange.range1.location];
+            else key = [NSNumber numberWithInt:drange.range1.location];
+            [self removeSubview:key];
         }
     }else {
         for (int n = drange.range1.length, 
              t = [[_sizes objectAtIndex:drange.range1.location] count];
              n < t; n++) {
-            UIView *subView = [self viewWithTag:tagWithRowAndSction(n, drange.range1.location)];
-            [self removeSubview:subView];
+            id key = nil;
+            if (n) 
+                key = [NSIndexPath indexPathForRow:n - 1
+                                         inSection:drange.range1.location];
+            else key = [NSNumber numberWithInt:drange.range1.location];
+            [self removeSubview:key];
         }
         for (int n = drange.range1.location + 1; 
              n <= drange.range2.location - 1; n++) {
             for (int m = 0 , t = [[_sizes objectAtIndex:n] count]; 
                  m < t; m ++) {
-                UIView *subView = [self viewWithTag:tagWithRowAndSction(m, n)];
-                [self removeSubview:subView];
+                id key = nil;
+                if (n) 
+                    key = [NSIndexPath indexPathForRow:n - 1
+                                             inSection:drange.range1.location];
+                else key = [NSNumber numberWithInt:drange.range1.location];
+                [self removeSubview:key];
             }
         }
         for (int n = 0; n <= drange.range2.length; n++) {
-            UIView *subView = [self viewWithTag:tagWithRowAndSction(n, drange.range2.location)];
-            [self removeSubview:subView];
+            id key = nil;
+            if (n) 
+                key = [NSIndexPath indexPathForRow:n - 1
+                                         inSection:drange.range1.location];
+            else key = [NSNumber numberWithInt:drange.range1.location];
+            [self removeSubview:key];
         }
     }
 }
@@ -169,27 +203,28 @@ static CATransition *__reloadTransition;
     if (!indexPath) {
         return nil;
     }
-    return (id)[self viewWithTag:tagWithIndexPath(indexPath)];
+    return [_showCache objectForKey:indexPath];
 }
 
 #define addContent(tSection, num, tWidth)\
 {\
-    MTSize size = [[[_sizes objectAtIndex:tSection] objectAtIndex:num] MTSizeValue];\
+    MTMatrixSection size = [[_sizes objectAtIndex:tSection] matrixSectionValue];\
     if (!num) {\
         if ([_matrixDelegate respondsToSelector:@selector(matrixView:headerOfSection:)]) {\
-            UIView *view = [_matrixDelegate matrixView:self headerOfSection:tSection];\
-            view.tag = tagWithRowAndSction(0, tSection);\
-            view.frame = (CGRect){0, size.offset, tWidth, size.height};\
-            [self addSubview:view];\
-        }\
+        UIView *view = [_matrixDelegate matrixView:self headerOfSection:tSection];\
+        view.frame = (CGRect){0, size.offset, tWidth, size.headerHeight};\
+        [_showCache setObject:view forKey:[NSNumber numberWithInt:tSection]];\
+        [self addSubview:view];\
+    }\
     }else {\
         NSIndexPath *indexPath = [NSIndexPath indexPathForRow:num - 1 \
-                                                    inSection:tSection];\
+        inSection:tSection];\
         MTMatrixViewCell *cell = [_matrixDelegate matrixView:self \
         cellOfIndexPath:indexPath];\
         cell.center = (CGPoint){_left + _spaceWidth / 2 +  (num - 1) % _transverse * _spaceWidth, \
-        size.offset + _spaceHeight / 2};\
-        cell.tag = tagWithRowAndSction(num, tSection);\
+            size.offset + size.headerHeight + _spaceHeight * ((num - 1) / _transverse + 0.5)};\
+        cell.indexPath = [NSIndexPath indexPathForRow:num - 1 inSection:tSection];\
+        [_showCache setObject:cell forKey:cell.indexPath];\
         [self insertSubview:cell atIndex:0];\
     }\
 }
@@ -205,13 +240,13 @@ static CATransition *__reloadTransition;
         }
     }else {
         for (int n = drange.range1.length, 
-             t = [[_sizes objectAtIndex:drange.range1.location] count];
+             t = [[_sizes objectAtIndex:drange.range1.location] matrixSectionValue].rowCount;
              n < t; n++) {
             addContent(drange.range1.location, n, width);
         }
         for (int l = drange.range1.location + 1; 
              l <= drange.range2.location - 1; l++) {
-            for (int m = 0 , t = [[_sizes objectAtIndex:l] count]; 
+            for (int m = 0 , t = [[_sizes objectAtIndex:l] matrixSectionValue].rowCount; 
                  m < t; m ++) {
                 addContent(l, m, width);
             }
@@ -224,60 +259,353 @@ static CATransition *__reloadTransition;
 
 - (void)showSubviewInRect:(CGRect)rect
 {
-    if (![_sizes count] ||
-        (rect.origin.y >= _topBounds.offset &&
-         rect.origin.y <= _topBounds.offset + _topBounds.height &&
-        rect.origin.y + rect.size.height >= _bottomBounds.offset &&
-         rect.origin.y + rect.size.height <= _bottomBounds.height + _bottomBounds.offset)) {
-        return;
-    }
-    MTRange startRange = {0,0};
-    MTRange endRange = {0,0};
-    getRangeWithSizes(_sizes, rect, &startRange, &endRange);
-    if (endRange.location == 0 && endRange.length == 0) {
-        int count = [_sizes count];
-        if (count) {
-            endRange.location = count - 1;
-            endRange.length = [[_sizes objectAtIndex:
-                                endRange.location] count] - 1;
+    float bottomf = rect.origin.y + rect.size.height;
+    
+    if (bottomf < _bottomBounds.offset) {
+        int n, t;
+        for (n = 0 , t = [_sizes count]; n < t ; n ++) {
+            MTMatrixSection sSection = [[_sizes objectAtIndex:n] matrixSectionValue];
+            if (bottomf < sSection.offset &&
+                bottomf > 0) {
+                break;
+            }
+        }
+        
+        if (n > 0) {
+            n --;
+            MTMatrixSection sSection = [[_sizes objectAtIndex:n] matrixSectionValue];
+            MTRange bottom;
+            bottom.location = sSection.section;
+            CGFloat top = sSection.offset + sSection.headerHeight;
+            CGFloat height = bottomf - top;
+            
+            if (height > 0) {
+                int count = height / _spaceHeight;
+                bottom.length = (count + 1) * _transverse + 1;
+                if (bottom.length > sSection.rowCount) 
+                    bottom.length = sSection.rowCount;
+                _bottomBounds.offset = sSection.offset + count * _spaceHeight;
+                _bottomBounds.height = _spaceHeight;
+            }else if (height > -sSection.headerHeight){
+                bottom.length = 0;
+                _bottomBounds.offset = sSection.offset;
+                _bottomBounds.height = sSection.headerHeight;
+            }else goto flag1;
+            MTRange range2 = bottom;
+            range2.length --;
+            if (range2.length < 0) {
+                range2.location --;
+                if (range2.location < 0) {
+                    goto flag1;
+                }
+                range2.length = [[_sizes objectAtIndex:range2.location] matrixSectionValue].rowCount;
+            }
+            [self removeSubviewsInDRange:(MTDRange){bottom, _endRange}];
+            _endRange = range2;
         }
     }
-    if (startRange.length == _startRange.length &&
-        startRange.location == _startRange.location &&
-        endRange.length == _endRange.length &&
-        endRange.location == _endRange.location) {
-        return;
+flag1:
+    if (rect.origin.y > _topBounds.offset + _topBounds.height) {
+        int n, t;
+        for (n = 0 , t = [_sizes count]; n < t ; n ++) {
+            MTMatrixSection sSection = [[_sizes objectAtIndex:n] matrixSectionValue];
+            if (rect.origin.y < sSection.offset &&
+                rect.origin.y > 0) {
+                break;
+            }
+        }
+        if (n > 0) {
+            n --;
+            MTMatrixSection sSection = [[_sizes objectAtIndex:n] matrixSectionValue];
+            MTRange start;
+            start.location = sSection.section;
+            CGFloat top = sSection.offset + sSection.headerHeight;
+            CGFloat height = rect.origin.y - top;
+            if (height > 0) {
+                int count = height / _spaceHeight;
+                start.length = count * _transverse;
+                _topBounds.offset = sSection.offset + count * _spaceHeight;
+                _topBounds.height = _spaceHeight;
+            }else if (height > -sSection.headerHeight){
+                start.length = 0;
+                _topBounds.offset = sSection.offset;
+                _topBounds.height = sSection.headerHeight;
+            }else goto flag2;
+            MTRange range2 = start;
+            range2.length ++;
+            if (range2.length > sSection.rowCount) {
+                range2.length = 0;
+                range2.location += 1;
+                if (range2.location >= [_sizes count]) {
+                    goto flag2;
+                }
+            }
+            [self removeSubviewsInDRange:(MTDRange){_startRange, start}];
+            
+            _startRange = range2;
+        }
     }
-    //do
     
-    MTDRange drange = rangeOutCompare((MTDRange){_startRange, _endRange}, 
-                                     (MTDRange){startRange, endRange});
-    [self removeSubviewsInDRange:drange];
-    
-    drange = rangeOutCompare((MTDRange){startRange, endRange}, 
-                            (MTDRange){_startRange, _endRange});
-    [self addSubviewInDRange:drange];
-    
-    
-    //end
-    _startRange = startRange;
-    _endRange = endRange;
-    _topBounds = [[[_sizes objectAtIndex:_startRange.location] 
-                   objectAtIndex:_startRange.length] MTSizeValue];
-    _bottomBounds = [[[_sizes objectAtIndex:_endRange.location] 
-                      objectAtIndex:_endRange.length] MTSizeValue];
+flag2:
+    if (rect.origin.y < _topBounds.offset) {
+        int n, t;
+        for (n = 0 , t = [_sizes count]; n < t ; n ++) {
+            MTMatrixSection sSection = [[_sizes objectAtIndex:n] matrixSectionValue];
+            if (rect.origin.y < sSection.offset &&
+                rect.origin.y > 0) {
+                break;
+            }
+        }
+        if (n > 0) {
+            n--;
+            MTMatrixSection sSection = [[_sizes objectAtIndex:n] matrixSectionValue];
+            MTRange start;
+            start.location = sSection.section;
+            CGFloat top = sSection.offset + sSection.headerHeight;
+            CGFloat height = rect.origin.y - top;
+            if (height > 0) {
+                int count = height / _spaceHeight;
+                start.length = count * _transverse + 1;
+                _topBounds.offset = sSection.offset + count * _spaceHeight;
+                _topBounds.height = _spaceHeight;
+            }else if (height > -sSection.headerHeight){
+                start.length = 0;
+                _topBounds.offset = sSection.offset;
+                _topBounds.height = sSection.headerHeight;
+            }else goto flag3;
+            MTRange range2 = _startRange;
+            range2.length --;
+            if (range2.length < 0) {
+                range2.location --;
+                if (range2.location < 0) {
+                    goto flag1;
+                }
+                range2.length = [[_sizes objectAtIndex:range2.location] matrixSectionValue].rowCount;
+            }
+            [self addSubviewInDRange:(MTDRange){start, range2}];
+            _startRange = start;
+        }
+    }
+flag3:
+    if (bottomf > _bottomBounds.offset + _bottomBounds.height) {
+        int n, t;
+        for (n = 0 ,  t = [_sizes count]; n < t ; n ++) {
+            MTMatrixSection sSection = [[_sizes objectAtIndex:n] matrixSectionValue];
+            if (bottomf < sSection.offset &&
+                bottomf > 0) {
+                break;
+            }
+        }
+        if (n > 0) {
+            n --;
+            MTMatrixSection sSection = [[_sizes objectAtIndex:n] matrixSectionValue];
+            MTRange bottom;
+            bottom.location = sSection.section;
+            CGFloat top = sSection.offset + sSection.headerHeight;
+            CGFloat height = bottomf - top;
+            if (bottomf >= self.contentSize.height) {
+                return;
+            }else {
+                int count = height / _spaceHeight;
+                bottom.length = (count + 1) * _transverse;
+                if (bottom.length > sSection.rowCount) 
+                    bottom.length = sSection.rowCount;
+                _bottomBounds.offset = sSection.offset + count * _spaceHeight;
+                _bottomBounds.height = _spaceHeight;
+            }
+            [self addSubviewInDRange:(MTDRange){_endRange.location, _endRange.length + 1, bottom}];
+            _endRange = bottom;
+        }
+    }
 }
 
 - (NSIndexPath*)indexPathWithCell:(MTMatrixViewCell*)cell
 {
-    return indexPathWithTag(cell.tag);
+    NSArray *views = [self subviews];
+    if ([views containsObject:cell]) {
+        return cell.indexPath;
+    }
+    return nil;
 }
 
 #pragma mark - control
 
 - (void)insertCells:(NSArray*)indexPaths withAnimation:(BOOL)animation
 {
+    int totle = [_sizes count];
+    int *indexes = malloc(sizeof(int) * totle);
+    memset(indexes, 0, sizeof(int) * totle);
+    //存放加入的位置
+    NSMutableDictionary *indexAdded = [NSMutableDictionary dictionary];
+    for (NSIndexPath *indexPath in indexPaths) {
+        int section = indexPath.section;
+        if (section < totle) {
+            indexes[section] ++;
+        }
+        [indexAdded setObject:indexPath
+                       forKey:[NSNumber numberWithBool:YES]];
+    }
+    CGFloat top;
+    CGFloat theTop = self.contentOffset.y,
+            theBottom = self.contentOffset.y +
+                        self.bounds.size.height;
+    MTRange nStart, nEnd;
+    nStart.location = -1;
+    nEnd.location = -1;
+    for (int n = 0 ; n < totle; n++) {
+        MTMatrixSection oldSection = [[_sizes objectAtIndex:n] matrixSectionValue];
+        if (indexes[n] > 0) {
+            //检查
+            int rowCount = oldSection.rowCount;
+            int nRow = [_matrixDelegate matrixView:self
+                                   numberOfSection:n];
+            NSAssert4(((nRow - rowCount) == indexes[n]), 
+                      @"row added %d in section %d, but the row is %d up to %d",
+                      indexes[n], n, rowCount, nRow);
+            oldSection.rowCount = nRow;
+        }
+        CGFloat height;
+        if (oldSection.rowCount) {
+            height = ((oldSection.rowCount - 1) / _transverse + 1) * _spaceHeight;
+        }else height = 0;
+        
+        height += oldSection.headerHeight;
+        oldSection.offset = top;
+        top += height;
+        [_sizes replaceObjectAtIndex:n
+                          withObject:[NSValue valueWithMatrixSection:oldSection]];
+        if (nStart.location == -1 && 
+            theTop < top) {
+            nStart.location = n;
+            
+            CGFloat t = (theTop - oldSection.headerHeight - oldSection.offset);
+            if (t < 0) {
+                nStart.length = 0;
+            }else {
+                int count = (t / _spaceHeight);
+                nStart.length = count * _transverse + 1;
+            }
+        }
+        if (nEnd.location == -1 &&
+            theBottom < top) {
+            nEnd.location = n;
+            CGFloat t = (theBottom - oldSection.headerHeight - oldSection.offset);
+            if (t < 0) {
+                nEnd.length = 0;
+            }else {
+                int count = (t / _spaceHeight);
+                nEnd.length = (count + 1) * _transverse;
+            }
+        }
+    }
     
+    CGFloat width = self.bounds.size.width;
+    self.contentSize = CGSizeMake(width, top);
+    NSMutableDictionary *tempDic = [NSMutableDictionary dictionaryWithDictionary:_showCache];
+    [_showCache removeAllObjects];
+    for (int n = nStart.location ; n <= _endRange.location; n++) {
+        int totle = _endRange.length + 1;
+        if (n < _endRange.location) {
+            totle = [[_sizes objectAtIndex:n] matrixSectionValue].rowCount;
+        }
+        int start = 0;
+        if (n == nStart.location) {
+            start = nStart.length;
+        }
+        int addCount = 0;
+        MTMatrixSection section = [[_sizes objectAtIndex:n] matrixSectionValue];
+        for (int m = start; m < totle; m++) {
+            NSComparisonResult ret = MTRangeCompare((MTRange){n,m}, _startRange);
+            if (ret == NSOrderedAscending) {
+                //添加
+                addContent(n, m, width);
+            }else if (MTRangeCompare((MTRange){n,m}, nEnd) != NSOrderedDescending){
+                //中间操作
+                if ([indexAdded objectForKey:[NSIndexPath indexPathForRow:m - 1
+                                                                inSection:n]]) {
+                    //新加入的添加
+                    addContent(n, m, width);
+                    addCount++;
+                }else {
+                    if (m - addCount) {
+                        NSIndexPath *index = [NSIndexPath indexPathForRow:m - addCount - 1
+                                                                inSection:n];
+                        MTMatrixViewCell *cell = [tempDic objectForKey:index];
+                        if (cell) {
+                            NSIndexPath *nIndex = [NSIndexPath indexPathForRow:m - 1
+                                                                     inSection:n];
+                            cell.indexPath = nIndex;
+                            cell.center = (CGPoint){_left + _spaceWidth / 2 +  (m - 1) % _transverse * _spaceWidth,
+                                section.offset + section.headerHeight + _spaceHeight * ((m - 1) / _transverse + 0.5)};
+                            [_showCache setObject:cell forKey:nIndex];
+                            [tempDic removeObjectForKey:index];
+                        }else {
+                            addContent(n, m, width);
+                        }
+                    }else {
+                        //header
+                        NSNumber *inNum = [NSNumber numberWithInt:n];
+                        UIView *view = [tempDic objectForKey:inNum];
+                        if (view) {
+                            view.frame = CGRectMake(0, section.offset,
+                                                    width, section.headerHeight);
+                            [_showCache setObject:view forKey:inNum];
+                            [tempDic removeObjectForKey:inNum];
+                        }else {
+                            addContent(n, m, width);
+                        }
+                    }
+                }
+            }else {
+                //移除
+                id key;
+                if (m) 
+                    key = [NSIndexPath indexPathForRow:m - 1 inSection:n];
+                else 
+                    key = [NSNumber numberWithInt:n];
+                
+                UIView *view = [tempDic objectForKey:key];
+                if (![[self subviews] containsObject:view]) 
+                    return;
+                if ([view isKindOfClass:[MTMatrixViewCell class]]) {
+                    NSString *indentify = ((MTMatrixViewCell*)view).reuseIdentifier;
+                    ((MTMatrixViewCell*)view).indexPath = nil;
+                    NSMutableArray *array = [_cached objectForKey:indentify];
+                    if (!array) {
+                        array = [NSMutableArray array];
+                        [_cached setObject:array
+                                    forKey:indentify];
+                    }
+                    [array addObject:view];
+                }
+                [view removeFromSuperview];
+                [tempDic removeObjectForKey:key];
+            }
+        }
+    }
+    NSLog(@"%@", tempDic);
+    NSArray *allKeys = [tempDic allKeys];
+    for (int n = 0 ,t = [allKeys count]; n < t ; n++) {
+        id key = [allKeys objectAtIndex:n];
+        UIView *view = [tempDic objectForKey:key];
+        if (![[self subviews] containsObject:view]) 
+            return;
+        if ([view isKindOfClass:[MTMatrixViewCell class]]) {
+            NSString *indentify = ((MTMatrixViewCell*)view).reuseIdentifier;
+            ((MTMatrixViewCell*)view).indexPath = nil;
+            NSMutableArray *array = [_cached objectForKey:indentify];
+            if (!array) {
+                array = [NSMutableArray array];
+                [_cached setObject:array
+                            forKey:indentify];
+            }
+            [array addObject:view];
+        }
+        [view removeFromSuperview];
+        [tempDic removeObjectForKey:key];
+    }
+    
+    free(indexes);
 }
 
 - (void)deleteCells:(NSArray*)indexPaths withAnimation:(BOOL)animation
@@ -294,12 +622,11 @@ static CATransition *__reloadTransition;
         [self removeSubview:cell];
         cell = [_matrixDelegate matrixView:self 
                            cellOfIndexPath:indexPath];
-        MTSize size = [[[_sizes objectAtIndex:indexPath.section] 
-                        objectAtIndex:indexPath.row + 1] MTSizeValue];
-        cell.center = (CGPoint){_left + _spaceWidth / 2 +
-            indexPath.row % _transverse * _spaceWidth, 
-            size.offset + _spaceHeight / 2};
-        cell.tag = tagWithRowAndSction(indexPath.row + 1, indexPath.section);
+        MTMatrixSection section = [[_sizes objectAtIndex:indexPath.section] matrixSectionValue];
+        int row = indexPath.row;
+        cell.center = (CGPoint){_left + _spaceWidth / 2 + row % _transverse * _spaceWidth, 
+            section.offset + section.headerHeight + _spaceHeight * (row / _transverse + 0.5)};
+        
         [self addSubview:cell];
         if (animation) {
             [cell.layer addAnimation:__reloadTransition

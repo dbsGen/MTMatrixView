@@ -13,7 +13,7 @@
 
 @implementation MTMatrixViewCell
 
-@synthesize reuseIdentifier = _reuseIdentifier;
+@synthesize reuseIdentifier = _reuseIdentifier, indexPath = _indexPath;
 
 - (id)initWithFrame:(CGRect)frame reuseIdentifier:(NSString *)reuseIdentifier
 {
@@ -22,16 +22,6 @@
         self.reuseIdentifier = reuseIdentifier;
     }
     return self;
-}
-
-- (void)setIndexPath:(NSIndexPath *)indexPath
-{
-    self.tag = tagWithIndexPath(indexPath);
-}
-
-- (NSIndexPath*)indexPath
-{
-    return indexPathWithTag(self.tag);
 }
 
 @end

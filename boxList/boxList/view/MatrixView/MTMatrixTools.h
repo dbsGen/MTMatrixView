@@ -30,6 +30,8 @@ BOOL rangeBetween(MTDRange drange, MTRange range);
 MTDRange rangeOutCompare(MTDRange range1, MTDRange range2);
 NSIndexPath *indexOfPoint(NSArray *sizes, CGPoint point, int num, CGFloat cellWidth, CGFloat cellHeight, CGFloat left);
 
+NSComparisonResult MTRangeCompare(MTRange r1, MTRange r2);
+
 @interface MTMatrixTools : NSObject
 
 @end

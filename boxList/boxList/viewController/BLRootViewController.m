@@ -39,10 +39,16 @@
 {
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
     if (self) {
+        n = 10;
         _matrixView = [[MTMatrixListView alloc] initWithFrame:CGRectMake(0, 0, 320, 416)];
         _matrixView.matrixDelegate = self;
         [self.view addSubview:_matrixView];
-        
+        UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithTitle:@"add"
+                                                                      style:UIBarButtonItemStyleBordered
+                                                                     target:self
+                                                                     action:@selector(addClicked:)];
+        self.navigationItem.rightBarButtonItem = barButton;
+        [barButton release];
     }
     return self;
 }
@@ -73,10 +79,6 @@
         cell = [[MTSubMatrixCell alloc] initWithFrame:CGRectMake(0, 0, 130, 130)
                                        reuseIdentifier:indentify];
         cell.backgroundColor = [UIColor redColor];
-        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                              action:@selector(tapOnCell:)];
-        [cell addGestureRecognizer:tap];
-        [tap release];
     }
     NSString *name = [NSString stringWithFormat:@"%d.JPG", indexPath.row + 1];
     UIImage *image = [_cache objectForKey:name];
@@ -101,8 +103,7 @@
     [image release];
     _obj.obj2 = obj.obj2;
     _obj.obj3 = obj.obj1;
-    //[_cache setObject:_obj.obj1 
-     //          forKey:_obj.obj3];
+    
     [self performSelectorOnMainThread:@selector(loadOver:)
                            withObject:_obj 
                         waitUntilDone:NO];
@@ -119,12 +120,25 @@
 - (NSInteger)matrixView:(MTMatrixListView*)matrixView
         numberOfSection:(NSInteger)section
 {
-    return 36;
+    return n;
 }
 
-- (void)tapOnCell:(UITapGestureRecognizer*)tap
+
+- (void)matrixView:(MTMatrixListView *)matrixView touchIndexPath:(NSIndexPath *)indexPath
 {
-    [_matrixView reloadCells:[NSArray arrayWithObject:[_matrixView indexPathWithCell:(id)tap.view]]
+    NSLog(@"%@", indexPath);
+}
+
+- (void)addClicked:(id)button
+{
+    NSLog(@"%@", button);
+    NSMutableArray *nArray = [NSMutableArray array];
+   [nArray addObject:[NSIndexPath indexPathForRow:n
+                                        inSection:0]];
+    [nArray addObject:[NSIndexPath indexPathForRow:n + 1
+                                         inSection:0]];
+    n += 2;
+    [_matrixView insertCells:nArray
                withAnimation:YES];
 }
 

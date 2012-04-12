@@ -57,6 +57,7 @@
 		5F311A091520616C00CD0F74 /* BLRootViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F311A081520616C00CD0F74 /* BLRootViewController.m */; };
 		5F311A111520622900CD0F74 /* MTMatrixListView.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F311A101520622900CD0F74 /* MTMatrixListView.m */; };
 		5F311A14152071F900CD0F74 /* MTMatrixViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F311A13152071F900CD0F74 /* MTMatrixViewCell.m */; };
+		5F4FC57B153432950069B71F /* MTMatrixSection.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F4FC57A153432940069B71F /* MTMatrixSection.m */; };
 		5F8606DE1523091D0002BD57 /* MTSubMatrixCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F8606DD1523091D0002BD57 /* MTSubMatrixCell.m */; };
 		5FBA888315215C1F00ECF3FA /* MTNavigationController.m in Sources */ = {isa = PBXBuildFile; fileRef = 5FBA888015215C1F00ECF3FA /* MTNavigationController.m */; };
 		5FBA888415215C1F00ECF3FA /* MTNavigationManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 5FBA888215215C1F00ECF3FA /* MTNavigationManager.m */; };
@@ -139,6 +140,8 @@
 		5F311A101520622900CD0F74 /* MTMatrixListView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTMatrixListView.m; sourceTree = "<group>"; };
 		5F311A12152071F900CD0F74 /* MTMatrixViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTMatrixViewCell.h; sourceTree = "<group>"; };
 		5F311A13152071F900CD0F74 /* MTMatrixViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTMatrixViewCell.m; sourceTree = "<group>"; };
+		5F4FC579153432940069B71F /* MTMatrixSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTMatrixSection.h; sourceTree = "<group>"; };
+		5F4FC57A153432940069B71F /* MTMatrixSection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTMatrixSection.m; sourceTree = "<group>"; };
 		5F8606DC1523091D0002BD57 /* MTSubMatrixCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTSubMatrixCell.h; sourceTree = "<group>"; };
 		5F8606DD1523091D0002BD57 /* MTSubMatrixCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTSubMatrixCell.m; sourceTree = "<group>"; };
 		5FBA887F15215C1F00ECF3FA /* MTNavigationController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTNavigationController.h; sourceTree = "<group>"; };
@@ -290,6 +293,8 @@
 				5F311A13152071F900CD0F74 /* MTMatrixViewCell.m */,
 				5FBF75CF1521BF8B00411178 /* MTMatrixTools.h */,
 				5FBF75D01521BF8B00411178 /* MTMatrixTools.m */,
+				5F4FC579153432940069B71F /* MTMatrixSection.h */,
+				5F4FC57A153432940069B71F /* MTMatrixSection.m */,
 			);
 			path = MatrixView;
 			sourceTree = "<group>";
@@ -572,6 +577,7 @@
 				5FBA889C15215C7F00ECF3FA /* CustomNavigateBar.m in Sources */,
 				5FBF75D11521BF8B00411178 /* MTMatrixTools.m in Sources */,
 				5F8606DE1523091D0002BD57 /* MTSubMatrixCell.m in Sources */,
+				5F4FC57B153432950069B71F /* MTMatrixSection.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

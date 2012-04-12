@@ -15,6 +15,7 @@
     MTMatrixListView    *_matrixView;
     NSMutableArray      *_array;
     NSCondition         *_lock;
+    int n;
 }
 
 

@@ -7,6 +7,7 @@
 //
 
 #import "MTMatrixTools.h"
+#import "MTMatrixSection.h"
 NSInteger tagWithIndexPath(NSIndexPath *indexPath)
 {
     return (indexPath.section << 16) | (indexPath.row + 1);
@@ -92,8 +93,10 @@ NSIndexPath *indexOfPoint(NSArray *sizes, CGPoint point, int num, CGFloat cellWi
     int totle = [sizes count];
     int section = totle - 1;
     for (int n = 0 , t = totle; n < t ; n++) {
-        NSArray *array = [sizes objectAtIndex:n];
-        MTSize size = [[array objectAtIndex:0] MTSizeValue];
+        MTMatrixSection tsi = [[sizes objectAtIndex:n] matrixSectionValue];
+        MTSize size;
+        size.offset = tsi.offset;
+        size.height = tsi.headerHeight;
         if (point.y > size.offset &&
             point.y < size.offset + size.height) {
             return nil;
@@ -104,16 +107,31 @@ NSIndexPath *indexOfPoint(NSArray *sizes, CGPoint point, int num, CGFloat cellWi
         }
     }
     if (section >= 0) {
-        NSArray *array = [sizes objectAtIndex:section];
-        MTSize size = [[array objectAtIndex:0] MTSizeValue];
+        MTMatrixSection tsi = [[sizes objectAtIndex:section] matrixSectionValue];
+        MTSize size;
         CGFloat top = point.y - (size.offset + size.height);
         int row = ((int)(top / cellHeight)) * num + (point.x - left) / cellWidth;
-        if (row < [array count] - 1) {
+        if (row < tsi.rowCount) {
             return [NSIndexPath indexPathForRow:row 
                                       inSection:section];
         }
     }
     return nil;
+}
+
+NSComparisonResult MTRangeCompare(MTRange r1, MTRange r2)
+{
+    if (r1.location > r2.location) {
+        return 1;
+    }else if (r1.location == r2.location && r1.length > r2.length) {
+        return 1;
+    }else if (r1.location < r2.location) {
+        return -1;
+    }else if (r1.location == r2.location && r1.length < r2.length) {
+        return -1;
+    }else {
+        return 0;
+    }
 }
 
 MTDRange rangeOutCompare(MTDRange range1, MTDRange range2)
