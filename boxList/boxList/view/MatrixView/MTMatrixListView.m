@@ -282,8 +282,6 @@ static CATransition *__reloadTransition;
             if (height > 0) {
                 int count = height / _spaceHeight;
                 bottom.length = (count + 1) * _transverse + 1;
-                if (bottom.length > sSection.rowCount) 
-                    bottom.length = sSection.rowCount;
                 _bottomBounds.offset = sSection.offset + count * _spaceHeight;
                 _bottomBounds.height = _spaceHeight;
             }else if (height > -sSection.headerHeight){
@@ -368,17 +366,17 @@ flag2:
                 start.length = count * _transverse + 1;
                 _topBounds.offset = sSection.offset + count * _spaceHeight;
                 _topBounds.height = _spaceHeight;
-            }else if (height > -sSection.headerHeight){
+            }else /*if (height > -sSection.headerHeight)*/{
                 start.length = 0;
                 _topBounds.offset = sSection.offset;
                 _topBounds.height = sSection.headerHeight;
-            }else goto flag3;
+            }//else goto flag3;
             MTRange range2 = _startRange;
             range2.length --;
             if (range2.length < 0) {
                 range2.location --;
                 if (range2.location < 0) {
-                    goto flag1;
+                    goto flag3;
                 }
                 range2.length = [[_sizes objectAtIndex:range2.location] matrixSectionValue].rowCount;
             }
@@ -403,16 +401,16 @@ flag3:
             bottom.location = sSection.section;
             CGFloat top = sSection.offset + sSection.headerHeight;
             CGFloat height = bottomf - top;
-            if (bottomf >= self.contentSize.height) {
-                return;
-            }else {
+            //if (bottomf >= self.contentSize.height) {
+                //return;
+            //}else {
                 int count = height / _spaceHeight;
                 bottom.length = (count + 1) * _transverse;
                 if (bottom.length > sSection.rowCount) 
                     bottom.length = sSection.rowCount;
                 _bottomBounds.offset = sSection.offset + count * _spaceHeight;
                 _bottomBounds.height = _spaceHeight;
-            }
+            //}
             [self addSubviewInDRange:(MTDRange){_endRange.location, _endRange.length + 1, bottom}];
             _endRange = bottom;
         }
@@ -583,7 +581,7 @@ flag3:
             }
         }
     }
-    NSLog(@"%@", tempDic);
+    
     NSArray *allKeys = [tempDic allKeys];
     for (int n = 0 ,t = [allKeys count]; n < t ; n++) {
         id key = [allKeys objectAtIndex:n];
