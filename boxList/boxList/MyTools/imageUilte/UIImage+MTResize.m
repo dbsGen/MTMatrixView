@@ -3,7 +3,7 @@
 //  Bottle
 //
 //  Created by apple on 12-1-9.
-//  Copyright (c) 2012年 __MyCompanyName__. All rights reserved.
+//  Copyright (c) 2012年 zrz. All rights reserved.
 //
 
 #import "UIImage+MTResize.h"

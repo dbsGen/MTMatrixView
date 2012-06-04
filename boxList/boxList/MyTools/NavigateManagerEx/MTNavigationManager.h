@@ -3,7 +3,7 @@
 //  Bottle
 //
 //  Created by apple on 11-11-9.
-//  Copyright (c) 2011年 __MyCompanyName__. All rights reserved.
+//  Copyright (c) 2011年 zrz. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>

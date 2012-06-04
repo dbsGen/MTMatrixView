@@ -3,7 +3,7 @@
 //  ipadOA
 //
 //  Created by zrz on 11-1-9.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//  Copyright 2011 zrz. All rights reserved.
 //
 
 #import "OAAnimation.h"

@@ -3,7 +3,7 @@
 //  ic_meetingViewer
 //
 //  Created by zrz on 11-8-27.
-//  Copyright 2011年 __MyCompanyName__. All rights reserved.
+//  Copyright 2011年 zrz. All rights reserved.
 //
 
 #import "CustomNavigateBar.h"
